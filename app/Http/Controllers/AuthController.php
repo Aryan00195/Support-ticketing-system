@@ -81,6 +81,16 @@ class AuthController extends Controller
                 'bework_id'=>$bework_id
             ]);
         }
+
+        $user->assignRole('User');
+        $credentials = [
+            'email' => $email,
+            'password' => $password,
+        ];
+        if (Auth::attempt($credentials)) {
+            return 'logged IN Successfull';
+        };
+
         $role = $userData['user_type'] == 1 ? 'Agent' : 'User';
        $user->assignRole($role);
         $credentials = [
@@ -96,7 +106,6 @@ class AuthController extends Controller
            
             return redirect()->back()->with('error', 'Authentication failed. Please try again.');
         }
-       
     }
     protected function sendLoginResponse(Request $request)
     {

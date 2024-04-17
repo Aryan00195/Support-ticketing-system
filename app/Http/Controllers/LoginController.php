@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+
 use App\Models\User;
+
 use Illuminate\Support\Facades\log;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,6 +18,18 @@ class LoginController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
+
+        try {
+            if (Auth::attempt($credential)) {
+                $user = Auth::user();
+                if ($user) {
+                    if ($user->hasRole('User')) {
+                        return redirect('/user/ticket');
+                    } else if ($user->hasRole('Agent')) {
+                        return view('agent.agentpanel');
+                    } else {
+                        return redirect('/admin/panel');
+
         
         try {
             
@@ -31,6 +45,7 @@ class LoginController extends Controller
                         return redirect('/agent/ticket');
                     } else {
                         return view('admin.adminpanel');
+
                     }
                 }
             }
@@ -41,7 +56,16 @@ class LoginController extends Controller
     }
     public function logout()
     {
+
+        try {
+            Auth::logout();
+            return response()->json(['status' => true, 'message' => 'Logout Successfully'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+
         Auth::logout();
         return response()->json(['status' => true, 'message' => 'Logout Successfully'], 200);
+
     }
 }
