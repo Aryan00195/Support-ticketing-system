@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use PSpell\Config;
 
 class AuthController extends Controller
@@ -77,13 +78,13 @@ class AuthController extends Controller
             ]);
         }
         $user->assignRole('User');
-        // if ($agentRole && !$user->roles->contains($agentRole->id)) {
-        //     $user->roles()->attach($agentRole->id);
-        // }
-        $userType = $userData['user_type'];
-        if ($userType == 0 || $userType == 1) {
-            return $this->sendLoginResponse($request);
-        }
+        $credentials = [
+            'email' => $email,
+            'password' => $password,
+        ];
+        if (Auth::attempt($credentials)) {
+            return 'logged IN Successfull';
+        };
     }
     protected function sendLoginResponse(Request $request)
     {
