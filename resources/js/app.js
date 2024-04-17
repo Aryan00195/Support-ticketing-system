@@ -14,6 +14,8 @@ import "devextreme/dist/css/dx.common.css";
 import "devextreme/dist/css/dx.light.css";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
+import VueSweetalert2 from "vue-sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 
 /**
  * Next, we will create a fresh Vue application instance. You may then begin
@@ -46,6 +48,20 @@ app.component("admin-profile-component", AdminProfileComponent);
 
 // import UserAllTickets from "./components/User/UserAllTickets.vue";
 // app.component("userall-ticket", UserAllTickets);
+=======
+import UserAllTickets from "./components/User/UserAllTickets.vue";
+app.component("userall-ticket", UserAllTickets);
+
+import ViewTicket from "./components/User/ViewTicket.vue";
+app.component("view-ticket", ViewTicket);
+
+import AgentNavbarComponent from "./components/Agent/AgentNavbarComponent.vue";
+app.component("agentnav-component", AgentNavbarComponent);
+
+import AgentTicket from "./components/Agent/AgentTicket.vue";
+app.component("agent-ticket", AgentTicket);
+
+
 /**
  * The following block of code may be used to automatically register your
  * Vue components. It will recursively scan this directory for the Vue
@@ -154,6 +170,11 @@ Object.entries(component).forEach(([name, component]) => {
     app.component(name, component);
 });
 app.use(vuetify);
+
 window.axios = axios;
 window.axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
+
+app.use(VueSweetalert2);
+window.Swal = app.config.globalProperties.$swal;
+
 app.mount("#app");
