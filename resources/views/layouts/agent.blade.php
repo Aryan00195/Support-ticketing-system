@@ -21,7 +21,7 @@
     <div id="app">
     <v-app>
        
-     <agentnav-component></agentnav-component>
+     <agent-nav-component></agent-nav-component>
         <v-main>
             <v-container fluid>
             @yield('content')

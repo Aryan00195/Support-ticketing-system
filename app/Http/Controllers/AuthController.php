@@ -50,11 +50,10 @@ class AuthController extends Controller
             "client_secret" => $clientSecret,
         ]);
         session(['oauth_response' => $response->json()]);
-          
-            $access_token = $request->access_token;
-            $password = $request->password;
-            session(['access_token' => $access_token]);
-            session(['password' => $password]);
+        $access_token = $request->access_token;
+        $password = $request->password;
+        session(['access_token' => $access_token]);
+        session(['password' => $password]);
         return redirect("/authuser");
     }
     public function authUser(Request $request)
@@ -66,55 +65,38 @@ class AuthController extends Controller
             "Accept" => "application/json",
             "Authorization" => "Bearer " . $access_token
         ])->get($base_url . "/api/user");
-
         $userData = $response->json();
-        $bework_id=$userData['id'];
+        $bework_id = $userData['id'];
         $email = $userData['email'];
         $name = $userData['first_name'] . ' ' . $userData['last_name'];
-       
         $user = User::where('email', $email)->first();
         if (!$user) {
             User::insert([
                 'name' => $name,
                 'email' => $email,
                 'password' => Hash::make($password),
-                'bework_id'=>$bework_id
+                'bework_id' => $bework_id
             ]);
         }
-
-        $user->assignRole('User');
+        $role = $userData['user_type'] == 1 ? 'Agent' : 'User';
+        $user->assignRole($role);
         $credentials = [
             'email' => $email,
             'password' => $password,
         ];
-        if (Auth::attempt($credentials)) {
-            return 'logged IN Successfull';
-        };
-
-        $role = $userData['user_type'] == 1 ? 'Agent' : 'User';
-       $user->assignRole($role);
-        $credentials = [
-            'email' => $email,
-                'password' =>$password,
-        ];
         return redirect()->route('checkuser', $credentials);
-       
         if (Auth::attempt($credentials)) {
-           
             return view('user.userpanel');
         } else {
-           
             return redirect()->back()->with('error', 'Authentication failed. Please try again.');
         }
     }
     protected function sendLoginResponse(Request $request)
     {
         $request->session()->regenerate();
-
         if ($response = $this->authenticated($request, $this->guard()->user())) {
             return $response;
         }
-
         return $request->wantsJson()
             ? new JsonResponse([], 204)
             : redirect()->intended($this->redirectPath());
