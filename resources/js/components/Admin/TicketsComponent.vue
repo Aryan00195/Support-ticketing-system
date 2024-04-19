@@ -1,188 +1,280 @@
 <template>
-    <DxDataGrid id="grid" :remote-operations="true" :show-borders="true" :data-source="dataSource"
-        :column-auto-width="true" :allow-column-resizing="true" @init-new-row="initNewRow" @row-inserted="rowInserted"
-        @editing-start="logEvent" @edit-canceled="cancelEdit">
-        <DxEditing :allow-adding="true" :allow-updating="true" :allow-deleting="true" :use-icons="true" mode="popup" />
-        <DxSearchPanel :visible="true" />
-        <DxColumn data-field="Tittle" data-type="string">
-        </DxColumn>
-        <DxColumn data-field="Status" data-type="string">
-            <DxRequiredRule />
-            <DxEmailRule message="Email is invalid" />
-        </DxColumn>
-        <DxColumn data-field="Priority" data-type="string">
-        </DxColumn>
-        <DxColumn data-field="Category" data-type="string">
-        </DxColumn>
-        <DxColumn data-field="Author Name" data-type="string">
-        </DxColumn>
-        <DxColumn data-field="Author Email" data-type="string">
-        </DxColumn>
-        <DxColumn data-field="Assigned to User" data-type="string">
-        </DxColumn>
-        <!-- <DxColumn caption="Roles" cell-template="role-template" edit-cell-template="rolesdropdown">
-        </DxColumn>
-        <template #rolesdropdown>
-            <DxDropDownBox :accept-custom-value="true" label="Select Role" labelMode="floating"
-                v-model:value="selectedRoleType" v-model:opened="roletypedropdown">
-                <DxList :data-source="roleTypes" selection-mode="single" @item-click="selectRoleType" />
-            </DxDropDownBox>
-        </template> -->
-        <template #role-template="{ data: cell }">
-            <span v-if="cell && cell.data && cell.data.roles">
-                <span v-for="(role, index) in cell.data.roles" :key="index">
-                    {{ role.name }}
-                </span>
-            </span>
-        </template>
-        <DxColumn data-field="password" data-type="password" :visible="showColumn" v-if="showColumn">
-            <DxPatternRule :pattern="passwordPattern"
-                message="Should be of min. seven charcter and must contains a special character only" />
-        </DxColumn>
-        <DxPaging :page-size="pageSize" />
-        <DxPager :visible="true" :allowed-page-sizes="[10, 15, 20]" :display-mode="'compact'"
-            :show-page-size-selector="true" :show-navigation-buttons="true" :show-info="true" />
-        <DxSummary>
-            <DxTotalItem column="id" summary-type="count" />
-        </DxSummary>
-    </DxDataGrid>
-</template>
-<script>
-import dxGridStore from "../../composition/dxGridStore";
-import { ref } from "vue";
-export default {
-    name: "CompaniesComponent",
-    setup() {
+  <div>
+    <v-dialog v-model="isEditing" max-width="600px" width="500px">
+      <v-card>
+        <v-card-title>Edit Row</v-card-title>
+        <v-card-text>
+          <v-select
+            v-model="currentStatus"
+            :items="statusOptions"
+            label="Status"
+            class="search-field"
+            variant="outlined"
+            placeholder="Select status"
+            density="compact"
+          ></v-select>
+          <v-select
+            v-model="currentuser"
+            :items="agentUsers.map((user) => user.name)"
+            label="Assign To User"
+            item-text="name"
+            item-value="id"
+            variant="outlined"
+            density="compact"
+          ></v-select>
+          <!-- <v-text-field
+            v-model="assignAgentId"
+            label="Assign Agent ID"
+            density="compact"
+            variant="outlined"
+          ></v-text-field> -->
+        </v-card-text>
+        <v-card-actions>
+          <v-btn color="primary" @click="saveChanges">Save</v-btn>
+          <v-btn @click="cancelEdit">Cancel</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <DxDataGrid
+      id="grid"
+      :remote-operations="true"
+      :show-borders="true"
+      :data-source="dataSource"
+      :column-auto-width="true"
+      :allow-column-resizing="true"
+      @init-new-row="initNewRow"
+      @row-inserted="rowInserted"
+      @editing-start="openModal"
+      @edit-canceled="cancelEdit"
+    >
+      <DxEditing  :use-icons="true" mode="popup" />
 
-        const params = ref({});
-        const selectedRoleType = ref("");
-        const roletypedropdown = ref(false);
-        const selectRoleType = (e) => {
-            let value = e.itemData;
-            selectedRoleType.value = value;
-            params.value = { ...params.value, roleType: selectedRoleType.value };
-            roletypedropdown.value = false;
+      <DxSearchPanel :visible="true" />
+
+      <DxColumn data-field="title" data-type="string"> </DxColumn>
+
+      <DxColumn
+        data-field="status.name"
+        data-type="string"
+        :edit-cell-render="statusEditCell"
+      >
+      </DxColumn>
+
+      <DxColumn data-field="category.name" data-type="string"> </DxColumn>
+
+      <DxColumn data-field="user.name" data-type="string"> </DxColumn>
+
+      <DxColumn data-field="user.email" data-type="string"> </DxColumn>
+
+      <DxColumn data-field="agent.name" data-type="string"> </DxColumn>
+      <DxColumn
+        caption="Actions"
+        alignment="center"
+        cell-template="customButtonTemplate"
+      ></DxColumn>
+      <template #customButtonTemplate="{ data }">
+        <div>
+          <v-icon class="custom-icon" @click="editRow(data.data)"
+            >mdi-pencil</v-icon
+          >
+          <!-- <v-btn icon @click="deleteRow(data.data)">
+          <v-icon>mdi-delete</v-icon>
+        </v-btn> -->
+        </div>
+      </template>
+      <DxPaging :page-size="pageSize" />
+      <DxPager
+        :visible="true"
+        :allowed-page-sizes="[10, 15, 20]"
+        :display-mode="'compact'"
+        :show-page-size-selector="true"
+        :show-navigation-buttons="true"
+        :show-info="true"
+      />
+      <DxSummary>
+        <DxTotalItem column="id" summary-type="count" />
+      </DxSummary>
+    </DxDataGrid>
+  </div>
+</template>
+  
+  <script>
+import dxGridStore from "../../composition/dxGridStore";
+import { ref, watch, onMounted } from "vue";
+
+export default {
+  name: "CompaniesComponent",
+  setup() {
+    const params = ref({});
+    const showColumn = ref(false);
+    const pageSize = ref(10);
+    const loadURL = `/admin/get/tickets`;
+    const { dataSource } = dxGridStore(loadURL, params, null, null, null);
+    const statusOptions = ref([]);
+    const agentUsers = ref([]);
+    const statusMap = ref({});
+    const currentStatus = ref(null);
+    const currentuser = ref(null);
+    const selectedTicketId = ref(null);
+    const fetchStatus = async () => {
+      try {
+        const response = await axios.get("/agent/status");
+        const uniqueStatusNames = [
+          ...new Set(response.data.map((status) => status.name)),
+        ];
+        statusOptions.value = [...uniqueStatusNames];
+        response.data.forEach((status) => {
+          statusMap.value[status.id] = status.name;
+        });
+      } catch (error) {
+        console.error("Error fetching statuses:", error);
+      }
+    };
+    const cancelEdit = () => {
+      isEditing.value = false;
+    };
+    const fetchAgentUsers = async () => {
+      try {
+        const response = await axios.get("/admin/get/agent-users");
+        agentUsers.value = response.data;
+        console.log(agentUsers);
+      } catch (error) {
+        console.error("Error fetching agent users:", error);
+      }
+    };
+
+    const openModal = () => {
+     
+      isEditing.value = true;
+    };
+
+    onMounted(() => {
+      fetchStatus();
+      fetchAgentUsers();
+    });
+
+    const statusEditCell = () => {
+      return {
+        component: "DxLookup",
+        dataSource: statusOptions.value,
+        valueExpr: "name",
+        displayExpr: "name",
+      };
+    };
+
+    const initNewRow = () => {
+      showColumn.value = true;
+    };
+
+    const rowInserted = () => {
+      showColumn.value = false;
+    };
+
+    const isEditing = ref(false);
+
+    const startEdit = () => {
+      isEditing.value = true;
+    };
+
+    watch(isEditing, (newValue) => {
+      console.log("isEditing value changed:", newValue);
+    });
+
+    const editRow = (rowData) => {
+  console.log("Edit row:", rowData);
+
+  if (rowData && rowData.status && rowData.status.name) {
+    currentStatus.value = rowData.status.name;
+  } else {
+    currentStatus.value = null;
+  }
+  if (rowData && rowData.agent && rowData.agent.name) {
+    currentuser.value = rowData.agent.name;
+  } else {
+    currentuser.value = null;
+  }
+  if (rowData && rowData.id) {
+    selectedTicketId.value = rowData.id;
+  } else {
+    selectedTicketId.value = null;
+  }
+  openModal();
+};
+    const deleteRow = (rowData) => {
+      console.log("Delete row:", rowData);
+    };
+
+    const saveChanges = async () => {
+      try {
+        console.log("Current user:", currentuser.value);
+        console.log("Current status:", currentStatus.value);
+        const updatedData = {
+          assign_agent_id: currentuser.value,
+          status_id: currentStatus.value,
         };
-        const phonePattern = ref("^[0-9]{10,13}$");
-        const passwordPattern = ref(/^.{7,}$/);
-        const showColumn = ref(false);
-        const roleTypes = ref([
-            'Admin',
-            'Agent',
-            'User',
-        ]);
-        const pageSize = ref(10);
-        const loadURL = `/admin/get/tickets`;
-        const updateURL = `/admin/update/ticket`;
-        const deleteUrl = `/admin/remove/ticket`;
-        const { dataSource } = dxGridStore(
-            loadURL,
-            params,
-            null,
-            updateURL,
-            deleteUrl
-        );
-        // console.log(dataSource);
-        const initNewRow = (e) => {
-            selectedRoleType.value = null
-            showColumn.value = true;
-        };
-        const rowInserted = (e) => {
-            showColumn.value = false;
-        };
-        const logEvent = (e) => {
-            showColumn.value = false;
-            selectedRoleType.value = e.data.roles[0].name;
-        };
-        const cancelEdit = (e) => {
-            showColumn.value = false;
+        console.log(updatedData);
+
+        if (!selectedTicketId.value) {
+          console.error("No ticket selected");
+          return;
         }
-        return {
-            dataSource,
-            showColumn,
-            updateURL,
-            phonePattern,
-            passwordPattern,
-            initNewRow,
-            rowInserted,
-            pageSize,
-            roleTypes,
-            selectRoleType,
-            selectedRoleType,
-            roletypedropdown,
-            params,
-            logEvent,
-            cancelEdit
-        };
-    },
+        const response = await axios.post(
+          `/admin/update/ticket/${selectedTicketId.value}`,
+          updatedData
+        );
+        if (response.status === 200) {
+          window.Swal.fire({
+              toast: true,
+              position: "top-end",
+              timer: 2000,
+              showConfirmButton: false,
+              icon: "success",
+              title: "Ticket updated Successfully",
+            });
+          isEditing.value = false;
+          window.location.reload();
+        } else {
+          window.Swal.fire({
+              toast: true,
+              position: "top-end",
+              timer: 2000,
+              showConfirmButton: false,
+              icon: "error",
+              title: "Ticket  not updated Successfully",
+            });
+        }
+      } catch (error) {
+        console.error("Error updating ticket:", error);
+      }
+    };
+    return {
+      dataSource,
+      showColumn,
+      initNewRow,
+      rowInserted,
+      pageSize,
+      isEditing,
+      startEdit,
+      statusEditCell,
+      statusOptions,
+      editRow,
+      selectedTicketId,
+      deleteRow,
+      openModal,
+      cancelEdit,
+      currentStatus,
+      agentUsers,
+      currentuser,
+      saveChanges,
+    };
+  },
 };
 </script>
-<style scoped>
-.container {
-    margin-top: 15px;
-    margin-left: 90px;
-    width: 90%;
-}
-
-.options {
-    padding: 10px;
-    margin-top: 10px;
-    background-color: rgba(191, 191, 191, 0.15);
-}
-
-.caption {
-    margin-bottom: 10px;
-    font-weight: 500;
-    font-size: 18px;
-}
-
-.option {
-    margin-bottom: 10px;
-}
-
-.option>span {
-    position: relative;
-    top: 2px;
-    margin-right: 10px;
-}
-
-.option>.dx-widget {
-    display: inline-block;
-    vertical-align: middle;
-}
-
-#requests .caption {
-    float: left;
-    padding-top: 7px;
-}
-
-#requests>div {
-    padding-bottom: 5px;
-}
-
-#requests>div::after {
-    content: "";
-    display: table;
-    clear: both;
-}
-
-#requests #clear {
-    float: right;
-}
-
-#requests ul {
-    list-style: none;
-    max-height: 100px;
-    overflow: auto;
-    margin: 0;
-}
-
-#requests ul li {
-    padding: 7px 0;
-    border-bottom: 1px solid #ddd;
-}
-
-#requests ul li:last-child {
-    border-bottom: none;
+  
+  <style scoped>
+.custom-icon {
+  background: none;
+  font-size: 20px;
 }
 </style>
+  

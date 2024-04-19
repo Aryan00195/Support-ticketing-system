@@ -31,7 +31,7 @@ const vuetify = createVuetify({
 import ExampleComponent from "./components/ExampleComponent.vue";
 app.component("example-component", ExampleComponent);
 
-import NavbarComponent from "./components/NavbarComponent.vue";
+import NavbarComponent from "./components/User/NavbarComponent.vue";
 app.component("navbar-component", NavbarComponent);
 
 import AdminNavbarComponent from "./components/Admin/NavbarComponent.vue";
@@ -46,9 +46,15 @@ app.component("admin-ticket-component", AdminTicketComponent);
 import AdminProfileComponent from "./components/Admin/ProfileComponent.vue";
 app.component("admin-profile-component", AdminProfileComponent);
 
+import AdminAgentComponent from "./components/Admin/AgentComponent.vue";
+app.component("admin-agent-component", AdminAgentComponent);
+
+import AdminDashboardComponent from "./components/Admin/DashboardComponent.vue";
+app.component("admin-dashboard-component", AdminDashboardComponent);
+
 // import UserAllTickets from "./components/User/UserAllTickets.vue";
 // app.component("userall-ticket", UserAllTickets);
-=======
+
 import UserAllTickets from "./components/User/UserAllTickets.vue";
 app.component("userall-ticket", UserAllTickets);
 
@@ -56,10 +62,13 @@ import ViewTicket from "./components/User/ViewTicket.vue";
 app.component("view-ticket", ViewTicket);
 
 import AgentNavbarComponent from "./components/Agent/AgentNavbarComponent.vue";
-app.component("agentnav-component", AgentNavbarComponent);
+app.component("agent-nav-component", AgentNavbarComponent);
 
 import AgentTicket from "./components/Agent/AgentTicket.vue";
 app.component("agent-ticket", AgentTicket);
+
+import AgentViewTicket from "./components/Agent/AgentViewTicket.vue";
+app.component("agent-view-ticket", AgentViewTicket);
 
 
 /**
@@ -112,6 +121,7 @@ import {
     DxLabel,
     DxGroupItem,
 } from "devextreme-vue/form";
+import DxPieChart from 'devextreme-vue/pie-chart';
 import { DxTooltip } from "devextreme-vue/tooltip";
 import { DxTabPanel, DxItem as DxTabItem } from "devextreme-vue/tab-panel";
 import { DxBox, DxItem as DxBoxItem } from "devextreme-vue/box";
@@ -164,7 +174,7 @@ const component = {
     DxChart,
     DxSeries,
     DxLegend,
-    DxCommonSeriesSettings,
+    DxCommonSeriesSettings,DxPieChart,
 };
 Object.entries(component).forEach(([name, component]) => {
     app.component(name, component);

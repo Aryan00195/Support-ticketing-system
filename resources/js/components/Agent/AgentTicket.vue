@@ -81,11 +81,11 @@
               mdi-pencil
             </v-icon>
           </v-card-actions>
-          <img
+          <!-- <img
             v-if="ticket.Attachment && ticket.Attachment.length > 0"
             :src="`/storage/assest/${ticket.Attachment}`"
             class="ticket-attachment"
-          />
+          /> -->
           <v-card-title @click="viewTicket(ticket.id)" class="ticket-title">
             {{ ticket.title }}
           </v-card-title>
@@ -213,7 +213,7 @@ export default {
       }
     };
     const viewTicket = (ticketId) => {
-      window.location.href = `/user/view-ticket/${ticketId}`;
+      window.location.href = `/agent/view-ticket/${ticketId}`;
     };
     const closeEditTicket = () => {
       isEditTicketModalOpen.value = false;
@@ -249,7 +249,7 @@ export default {
         .get("/agent/fetch-tickets")
         .then((response) => {
           tickets.value = response.data.data;
-          console.log(tickets.value);
+       
         })
         .catch((error) => {
           console.error("Error fetching tickets:", error);

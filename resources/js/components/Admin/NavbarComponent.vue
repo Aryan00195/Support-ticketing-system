@@ -64,19 +64,19 @@ export default {
             },
             {
                 title: "Tickets",
-                icon: "mdi-list-box",
+                icon: "mdi-ticket-account",
                 href: "/admin/ticket",
             },
             {
                 title: "Agents",
                 icon: "mdi-list-box",
-                href: "/admin/jobs",
+                href: "/admin/agents",
             },
-            {
-                title: "Profile",
-                icon: "mdi-account-circle",
-                href: "/admin/profile",
-            },
+            // {
+            //     title: "Profile",
+            //     icon: "mdi-account-circle",
+            //     href: "/admin/profile",
+            // },
             // {
             //   title: "Add New Blog",
             //   icon: "mdi-post",
