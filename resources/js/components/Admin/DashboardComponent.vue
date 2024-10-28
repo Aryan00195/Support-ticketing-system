@@ -7,8 +7,7 @@
             <v-card-item>
               <div class="flex-container">
                 <v-icon class="bottomicon3" size="48"
-                  >mdi-ticket-account</v-icon
-                >
+                  >mdi-ticket-account</v-icon>
               </div>
               <div class="cardtop">
                 <h6 class="dashboardh6">Tickets</h6>

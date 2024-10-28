@@ -1,4 +1,4 @@
 @extends('layouts.dashboard')
 @section('content')
-<admin-dashboard-component></admin-dashboard-component>
+    <admin-category-component></admin-category-component>
 @endsection

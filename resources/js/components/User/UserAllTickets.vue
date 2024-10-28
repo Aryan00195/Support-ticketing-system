@@ -11,7 +11,6 @@
       placeholder="Select status"
       density="compact"
     ></v-select>
-
     <div class="sorting-options" v-if="filteredTickets.length > 0">
       <span>Sort by:</span>
       <v-icon @click="sortBy('title')">{{
@@ -48,6 +47,16 @@
             item-title="name"
             item-value="id"
             label="Select Category"
+            density="compact"
+            @update:modelValue="fetchSubcategories"
+          ></v-select>
+          <v-select
+            v-model="selectedSubcategory"
+            :items="subcategories"
+            label=" Select Subcategory"
+            item-title="name"
+            item-value="id"
+            variant="outlined"
             density="compact"
           ></v-select>
           <v-file-input
@@ -87,6 +96,16 @@
             item-value="id"
             label="Select Category"
             density="compact"
+            @update:modelValue="fetcheditSubcategories"
+          ></v-select>
+          <v-select
+            v-model="editedTicket.subcategory"
+            :items="subcategories"
+            label=" Select Subcategory"
+            item-title="name"
+            item-value="id"
+            variant="outlined"
+            density="compact"
           ></v-select>
           <v-file-input
             label="Attachment"
@@ -110,7 +129,16 @@
         lg="12"
       >
         <v-card>
-          <v-card-actions style="position: absolute; top: 0; right: 0">
+          <div class="ticket-info">
+            <!-- <span class="ticket-status">{{ ticket.status_name }}</span> -->
+            <span
+              :style="{ backgroundColor: getStatusColor(ticket.status_name) }"
+              class="ticket-status"
+              >{{ ticket.status_name }}</span
+            >
+            <span class="last-comment-date">{{ lastCommentDate(ticket) }}</span>
+          </div>
+          <v-card-actions style="position: absolute; top: 10%; right: 0">
             <v-icon @click="editTicket(ticket.id)" style="color: green">
               mdi-pencil
             </v-icon>
@@ -118,14 +146,15 @@
               mdi-delete-outline
             </v-icon>
           </v-card-actions>
-
           <div class="ticket-header">
-            <v-avatar>
+            <!-- <v-avatar>
               <img :src="defaultUserImage" class="ticket-attachment" />
-            </v-avatar>
+            </v-avatar> -->
             <v-card-title @click="viewTicket(ticket.id)" class="ticket-title">
               {{ ticket.title }}
             </v-card-title>
+            <!-- <span class="last-comment-date">last activity:  {{ lastCommentDate(ticket) }}</span>
+            <span class="ticket-status">{{ ticket.status_name }}</span> -->
           </div>
           <v-card-text>
             <p>
@@ -158,9 +187,8 @@
     </div>
   </div>
 </template>
-
   <script>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import axios from "axios";
 export default {
   name: "UserTicket",
@@ -169,16 +197,19 @@ export default {
     const searchQuery = ref("");
     const sortField = ref("");
     const sortDirection = ref("asc");
+    const subcategories = ref([]);
+    const selectedCategory = ref(null);
+    const selectedSubcategory = ref(null);
     const ticket = ref({
       title: "",
       content: "",
       Attachment: [],
       category: "",
     });
-    const defaultUserImage = ref("/storage/assest/img1.png");
     const statusMap = ref({});
     const statusFilter = ref("All");
     const statusOptions = ref([]);
+    const status = ref([]);
     const isEditTicketModalOpen = ref(false);
     const editedTicket = ref({
       id: "",
@@ -186,20 +217,53 @@ export default {
       content: "",
       Attachment: [],
       category: "",
+      subcategory: "",
     });
-
+    const getStatusColor = computed(() => {
+      return (statusName) => {
+        if (statusName === "Open") {
+          return "#FFA500";
+        } else if (statusName === "Closed") {
+          return "#d50000";
+        } else if (statusName === "In Progress") {
+          return "#FFFF00";
+        } else {
+          return "#64dd17";
+        }
+      };
+    });
     const Category = ref([]);
     const fetchCategory = async () => {
       try {
         axios.get("/user/categories").then((response) => {
-          Category.value = response.data;
+          Category.value = response.data.data;
+          console.log(Category.value);
         });
       } catch (error) {
         console.error("Error fetching job types:", error);
       }
     };
-    const selectcategory = (selectedCategory) => {
-      ticket.category = selectedCategory.name;
+    const fetchSubcategories = async () => {
+      // selectedCategory.value="";
+      try {
+        const response = await axios.get(
+          `/user/subcategories?category_id=${ticket.value.category}`
+        );
+        subcategories.value = response.data.data;
+      } catch (error) {
+        console.error("Error fetching subcategories:", error);
+      }
+    };
+    const fetcheditSubcategories = async () => {
+      // selectedCategory.value="";
+      try {
+        const response = await axios.get(
+          `/user/subcategories?category_id=${editedTicket.value.category}`
+        );
+        subcategories.value = response.data.data;
+      } catch (error) {
+        console.error("Error fetching subcategories:", error);
+      }
     };
     const tickets = ref([]);
     const editTicket = (ticketId) => {
@@ -213,6 +277,8 @@ export default {
         editedTicket.value.content = ticketToEdit.content;
         editedTicket.value.Attachment = ticketToEdit.Attachment;
         editedTicket.value.category = ticketToEdit.category_id;
+        editedTicket.value.subcategory = ticketToEdit.subcategory_id;
+        selectedSubcategory.value = ticketToEdit.subcategory_id;
         isEditTicketModalOpen.value = true;
       } else {
         console.error("Ticket not found!");
@@ -230,14 +296,11 @@ export default {
           ticket.content
             .toLowerCase()
             .includes(searchQuery.value.toLowerCase());
-
         const statusName = statusMap.value[ticket.status_id];
-
         const matchesStatus =
           !statusFilter.value ||
           statusFilter.value === "All" ||
           statusName === statusFilter.value;
-
         return matchesSearch && matchesStatus;
       });
     });
@@ -296,6 +359,7 @@ export default {
         formData.append("content", editedTicket.value.content);
         formData.append("Attachment", editedTicket.value.Attachment);
         formData.append("category_id", editedTicket.value.category);
+        formData.append("subcategory_id", editedTicket.value.subcategory);
         const response = await axios.post(
           `/user/tickets/${editedTicket.value.id}`,
           formData,
@@ -305,21 +369,29 @@ export default {
             },
           }
         );
-
         if (response.status === 200) {
           isEditTicketModalOpen.value = false;
+          window.Swal.fire({
+            toast: true,
+            position: "top-end",
+            timer: 2000,
+            showConfirmButton: false,
+            icon: "success",
+            title: "Ticket updated Successfully",
+          });
           window.location.reload();
         }
       } catch (error) {
         console.error("Error updating ticket:", error);
       }
     };
-
     const fetchTickets = () => {
       axios
         .get("/user/fetch-tickets")
         .then((response) => {
           tickets.value = response.data.data;
+          status.value = response.data.data[0].status;
+          // console.log(response.data.data[0].status);
         })
         .catch((error) => {
           console.error("Error fetching tickets:", error);
@@ -343,6 +415,7 @@ export default {
       fetchTickets();
       fetchCategory();
       fetchStatus();
+      //  fetchSubcategories();
     });
     const openModal = () => {
       modalOpen.value = true;
@@ -350,6 +423,39 @@ export default {
     const closeModal = () => {
       modalOpen.value = false;
     };
+    // const addTicket = () => {
+    //   const formData = new FormData();
+    //   for (let key in ticket.value) {
+    //     if (key !== "Attachment") {
+    //       formData.append(key, ticket.value[key]);
+    //     } else {
+    //       formData.append("Attachment", ticket.value[key][0]);
+    //     }
+    //   }
+    //   axios
+    //     .post("/user/tickets", formData, {
+    //       headers: {
+    //         "Content-Type": "multipart/form-data",
+    //       },
+    //     })
+    //     .then((response) => {
+    //       if (response.data.status == true) {
+    //         window.Swal.fire({
+    //           toast: true,
+    //           position: "top-end",
+    //           timer: 2000,
+    //           showConfirmButton: false,
+    //           icon: "success",
+    //           title: "Ticket Created Successfully",
+    //         });
+    //         closeModal();
+    //         window.location.reload();
+    //       }
+    //     })
+    //     .catch((error) => {
+    //       console.error("Error:", error);
+    //     });
+    // };
     const addTicket = () => {
       const formData = new FormData();
       for (let key in ticket.value) {
@@ -359,6 +465,9 @@ export default {
           formData.append("Attachment", ticket.value[key][0]);
         }
       }
+
+      formData.append("subcategory_id", selectedSubcategory.value);
+
       axios
         .post("/user/tickets", formData, {
           headers: {
@@ -411,6 +520,30 @@ export default {
     const paginate = (page) => {
       currentPage.value = page;
     };
+    const lastCommentDate = (ticket) => {
+      if (ticket.comments && ticket.comments.length > 0) {
+        const lastComment = ticket.comments[ticket.comments.length - 1];
+        const commentDate = new Date(lastComment.created_at);
+        const currentDate = new Date();
+        const timeDifference = currentDate - commentDate;
+        const daysDifference = Math.floor(
+          timeDifference / (1000 * 60 * 60 * 24)
+        );
+        if (daysDifference === 0) {
+          return "today";
+        } else if (daysDifference === 1) {
+          return "1 day ago";
+        } else {
+          return `${daysDifference} days ago`;
+        }
+      }
+      return "No comments";
+    };
+    watch(selectedCategory, (newValue) => {
+      if (newValue !== null) {
+        fetchSubcategories(newValue);
+      }
+    });
     return {
       modalOpen,
       openModal,
@@ -434,40 +567,73 @@ export default {
       totalPages,
       paginatedTickets,
       paginate,
-      selectcategory,
+      // selectcategory,
       fetchCategory,
       Category,
       statusFilter,
       statusOptions,
       truncateDescription,
       isDescriptionLong,
-      defaultUserImage,
+      lastCommentDate,
+      status,
+      getStatusColor,
+      selectedCategory,
+      selectedSubcategory,
+      subcategories,
+      fetchSubcategories,
+      fetcheditSubcategories,
+      // defaultUserImage,
     };
   },
 };
 </script>
-  <style scoped>
+<style scoped>
 .ticket-attachment {
   width: 90px;
   height: 50px;
   transition: width 0.3s, height 0.3s;
 }
+
 .search-field {
   width: 200px;
   margin-left: auto;
   margin-right: 30px;
 }
+
 .noticket {
   text-align: center;
   font-size: 20px;
 }
+
 .sorting-options {
   margin-top: 10px;
   margin-bottom: 10px;
 }
+
 .sorting-options span {
   margin-right: 10px;
 }
+
+.ticket-title:hover {
+  color: #558b2f;
+  text-decoration: underline 1px;
+}
+
+.read-more {
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.3s ease-in-out;
+}
+.read-more:hover {
+  color: #0056b3;
+}
+
+.ticket-header {
+  display: flex;
+  align-items: center;
+}
+
 .ticket-title {
   color: #356427;
   text-decoration: none;
@@ -475,22 +641,38 @@ export default {
   cursor: pointer;
 }
 
-.ticket-title:hover {
-  color: #558b2f;
-  text-decoration: underline 1px;
-}
-.read-more {
-  color: #007bff;
-  cursor: pointer;
-  text-decoration: underline;
-  transition: color 0.3s ease-in-out;
+.last-comment-date {
+  color: #222721;
+  font-size: 12px;
 }
 
-.read-more:hover {
-  color: #0056b3;
+.ticket-status.open,
+.ticket-status.closed {
+  color: green;
+
+  border-radius: 3px;
+  margin-left: 10px;
+  font-size: 12px;
 }
-.ticket-header {
+
+.ticket-status.open {
+  background-color: #356427;
+}
+
+.ticket-status.closed {
+  background-color: #d50000;
+}
+.ticket-info {
   display: flex;
+  align-items: center;
+  margin-right: 10px;
+  float: right;
+}
+.ticket-status {
+  color: black;
+  padding: 3px 8px;
+  border-radius: 3px;
+  margin-right: 10px;
+  font-size: 12px;
 }
 </style>
-  

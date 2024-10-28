@@ -33,7 +33,7 @@ export default function useDataSource(
                     paramsObject[i] = JSON.stringify(loadOptions[i]);
                 }
             });
-            // console.log(params.value);
+            //  console.log(params.value);
             if (params) {
                 Object.assign(paramsObject, params.value);
             }
@@ -43,7 +43,7 @@ export default function useDataSource(
                     if (skipLoader.value) {
                         skipLoader.value = false;
                     }
-                    // console.log(data);
+                    //  console.log(data);
                     return {
                         data: data.data || [],
                         summary: data.summary || [],
@@ -92,7 +92,9 @@ export default function useDataSource(
                 });
         },
         remove: (key) => {
+            console.log(key.id)
             return axios
+           
                 .delete(deleteURL + "/" + key.id)
                 .then(() => {
                     return true;

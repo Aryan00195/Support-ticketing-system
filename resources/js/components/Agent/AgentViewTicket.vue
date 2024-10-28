@@ -248,6 +248,8 @@ export default {
     };
     const downloadAttachment = (fileName) => {
       const link = document.createElement("a");
+      console.log(fileName);
+      return;
       link.href = `/storage/assest/${fileName}`;
       link.download = fileName.split("/").pop();
       link.click();

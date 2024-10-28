@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Ticket;
 use App\Models\Status;
+use App\Models\Subcategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use App\Jobs\SendTicketCreatedEmail;
 use App\Notifications\DataChangeEmailNotification;
+use Illuminate\Support\Facades\Validator;
 
 class TicketController extends Controller
 {
@@ -62,12 +64,13 @@ class TicketController extends Controller
                 'user_id' => auth()->user()->id,
                 'Attachment' => $imageName,
                 'status_id' => $pendingStatus->id,
+                'subcategory_id' => $request->subcategory_id
             ]);
 
 
             $ticket->save();
             $ticketUrl = url('/user/view-ticket/' . $ticket->id);
-            SendTicketCreatedEmail::dispatch($ticket, $ticketUrl);
+            // SendTicketCreatedEmail::dispatch($ticket, $ticketUrl);
 
             return response()->json([
                 'status' => true,
@@ -134,6 +137,7 @@ class TicketController extends Controller
     }
     public function update(Request $request, $id)
     {
+
         try {
             $validatedData = $request->validate([
                 'title' => 'required',
@@ -155,6 +159,9 @@ class TicketController extends Controller
             }
             if ($request->has('category_id')) {
                 $ticket->category_id = $request->input('category_id');
+            }
+            if ($request->has('subcategory_id')) {
+                $ticket->subcategory_id = $request->input('subcategory_id');
             }
             $ticket->save();
             return response()->json(['status' => true, 'message' => 'Ticket updated successfully', 'data' => $ticket], 200);
@@ -189,19 +196,27 @@ class TicketController extends Controller
             ], 500);
         }
     }
-
     public function fetchTickets()
     {
         $user = Auth::user();
 
-        $tickets = Ticket::where('user_id', $user->id)->get();
-        //    dd($tickets);
+        $tickets = Ticket::with('comments', 'status', 'category', 'subcategory')->where('user_id', $user->id)->get();
+        //dd($tickets);
+        $tickets->each(function ($ticket) {
+            $ticket->status_name = $ticket->status->name;
+            $ticket->category_name = $ticket->category->name;
+//             if($ticket->subcategory_name!=null)
+//             {
+// $ticket->subcategory_name=$ticket->subcategory->name;
+//             }// $ticket->subcategory_name = $ticket->subcategory->name;
 
+        });
         return response()->json([
             'status' => true,
             'data' => $tickets,
         ]);
     }
+
 
     public function agentindex()
     {
@@ -249,16 +264,14 @@ class TicketController extends Controller
     public function fetchcategory()
     {
         try {
-            $Status = Category::all();
-
-
-            if ($Status->isEmpty()) {
-                return response()->json(['message' => 'No job types found'], 404);
+            $categories = Category::all();
+            if ($categories->isEmpty()) {
+                return ['message' => 'No job types found', 'data' => []];
             }
 
-            return response()->json($Status);
+            return ['data' => $categories];
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Error retrieving job types', 'error' => $e->getMessage()], 500);
+            return ['message' => 'Error retrieving job types', 'error' => $e->getMessage()];
         }
     }
     public function getTickets(Request $request)
@@ -418,5 +431,167 @@ class TicketController extends Controller
 
 
         return view('agent.agentviewticket')->with('ticketId', $ticketId);
+    }
+    public function addCategory(Request $request)
+    {
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255',
+            ]);
+            if ($validator->fails()) {
+                return ['message' => 'Validation error', 'errors' => $validator->errors()];
+            }
+            $category = new Category();
+            $category->name = $request->input('name');
+
+            $category->save();
+
+
+            return ['message' => 'Category added successfully', 'data' => $category];
+        } catch (\Exception $e) {
+
+            return ['message' => 'Error adding category', 'error' => $e->getMessage()];
+        }
+    }
+    public function deleteCategory($categoryId)
+    {
+        try {
+            $category = Category::find($categoryId);
+            if (!$category) {
+                return ['message' => 'Category not found'];
+            }
+            $category->delete();
+            return ['message' => 'Category deleted successfully'];
+        } catch (\Exception $e) {
+            return ['message' => 'Error deleting category', 'error' => $e->getMessage()];
+        }
+    }
+
+    public function UpdateCategory(Request $request, $categoryId)
+    {
+        try {
+
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255',
+
+            ]);
+
+
+            if ($validator->fails()) {
+                return ['message' => 'Validation error', 'errors' => $validator->errors()];
+            }
+
+
+            $category = Category::find($categoryId);
+
+
+            if (!$category) {
+                return ['message' => 'Category not found'];
+            }
+
+
+            $category->name = $request->input('name');
+
+            $category->save();
+
+
+            return ['message' => 'Category updated successfully', 'data' => $category];
+        } catch (\Exception $e) {
+
+            return ['message' => 'Error updating category', 'error' => $e->getMessage()];
+        }
+    }
+    // public function getSubcategories(Category $category)
+    // {
+    //     $subcategories = Subcategory::where('category_id', $category->id)->get(); 
+    //     return response()->json(['data' => $subcategories]);
+    // }
+    public function getSubcategories(Request $request)
+    {
+        try {
+            if (empty($request->category_id)) {
+                $subcategories = Subcategory::all();
+            }
+            $subcategories = Subcategory::where("category_id", $request->category_id)->get();
+            if ($subcategories->isEmpty()) {
+                return ['message' => 'No subcategory found', 'data' => []];
+            }
+            return ['data' => $subcategories];
+        } catch (\Exception $e) {
+            return ['message' => 'Error retrieving subcategory', 'error' => $e->getMessage()];
+        }
+    }
+    // public function getSubcategories($categoryId)
+    // {
+    //     $subcategories = Subcategory::where('category_id', $categoryId)->get();
+    //     return response()->json(['data' => $subcategories]);
+    // }
+    public function fetchsubcategory()
+    {
+        try {
+            $subcategories = Subcategory::with('category')->get();
+            if ($subcategories->isEmpty()) {
+                return ['message' => 'No subcategory found', 'data' => []];
+            }
+            $data = $subcategories->map(function ($subcategory) {
+                return [
+                    'id' => $subcategory->id,
+                    'subcategory_name' => $subcategory->name,
+                    'category_name' => $subcategory->category->name
+                ];
+            });
+
+            return ['data' => $data];
+        } catch (\Exception $e) {
+            return ['message' => 'Error retrieving subcategory', 'error' => $e->getMessage()];
+        }
+    }
+    public function deletesubCategory($subcategoryId)
+    {
+        try {
+            $category = Subcategory::find($subcategoryId);
+            if (!$category) {
+                return ['message' => 'SubCategory not found'];
+            }
+            $category->delete();
+            return ['message' => 'SubCategory deleted successfully'];
+        } catch (\Exception $e) {
+            return ['message' => 'Error deleting subcategory', 'error' => $e->getMessage()];
+        }
+    }
+    public function addsubCategory(Request $request)
+    {
+        $categoryName = $request->query('category_id');
+        $category = Category::where('name', $categoryName)->first();
+        if (!$category) {
+            return response()->json(['error' => 'Category not found'], 404);
+        }
+        $subcategory = new Subcategory();
+        $subcategory->name = $request->input('subcategory_name');
+        $subcategory->category_id = $category->id;
+        $subcategory->save();
+        return response()->json(['message' => 'Subcategory created successfully'], 200);
+    }
+    public function UpdateSubCategory(Request $request, $categoryId)
+    {
+
+        try {
+            $subcategory = Subcategory::find($categoryId);
+            if (!$subcategory) {
+                return ['message' => 'Category not found'];
+            }
+            $categoryName = $request->query('category_id');
+
+            $category = Category::where('name', $categoryName)->first();
+            $subcategory->name = $request->input('subcategory_name');
+            $subcategory->category_id = $category->id;
+
+            $subcategory->update();
+
+            return ['message' => 'Category updated successfully', 'data' => $category];
+        } catch (\Exception $e) {
+            return ['message' => 'Error updating category', 'error' => $e->getMessage()];
+        }
     }
 }

@@ -4,13 +4,13 @@
     <v-card class="ticket-card">
       <v-card-text>
         <div class="ticket-header">
-          <v-avatar size="40">
+          <!-- <v-avatar size="40">
             <img
               :src="defaultUserImage"
               alt="Default Avatar"
               class="user-avatar"
             />
-          </v-avatar>
+          </v-avatar> -->
           <strong>{{ user.name }}</strong>
           <span class="ticket-date"
             >{{ formatCreatedAt(ticket.created_at) }}<br />
@@ -155,7 +155,6 @@ export default {
       if (ticket.value.comments) {
         ticket.value.comments.forEach((comment) => {
           const roleName = comment.user.roles[0].name;
-
           if (roleName === "Agent" || roleName === "Admin") {
             count++;
           }

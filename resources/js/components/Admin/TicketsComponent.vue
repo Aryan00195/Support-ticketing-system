@@ -2,7 +2,7 @@
   <div>
     <v-dialog v-model="isEditing" max-width="600px" width="500px">
       <v-card>
-        <v-card-title>Edit Row</v-card-title>
+        <v-card-title>Edit</v-card-title>
         <v-card-text>
           <v-select
             v-model="currentStatus"
@@ -46,6 +46,8 @@
       @row-inserted="rowInserted"
       @editing-start="openModal"
       @edit-canceled="cancelEdit"
+     
+      @saving="saveEvent"
     >
       <DxEditing  :use-icons="true" mode="popup" />
 
@@ -57,6 +59,7 @@
         data-field="status.name"
         data-type="string"
         :edit-cell-render="statusEditCell"
+        class="company_time"
       >
       </DxColumn>
 
@@ -270,7 +273,6 @@ export default {
   },
 };
 </script>
-  
   <style scoped>
 .custom-icon {
   background: none;

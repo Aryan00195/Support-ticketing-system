@@ -52,6 +52,13 @@ app.component("admin-agent-component", AdminAgentComponent);
 import AdminDashboardComponent from "./components/Admin/DashboardComponent.vue";
 app.component("admin-dashboard-component", AdminDashboardComponent);
 
+import AdminCategoryComponent from "./components/Admin/CategoryComponent.vue";
+app.component("admin-category-component", AdminCategoryComponent);
+
+
+import AdminSubCategoryComponent from "./components/Admin/SubCategoryComponent.vue";
+app.component("admin-subcategory-component", AdminSubCategoryComponent);
+
 // import UserAllTickets from "./components/User/UserAllTickets.vue";
 // app.component("userall-ticket", UserAllTickets);
 

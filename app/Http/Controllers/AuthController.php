@@ -78,7 +78,8 @@ class AuthController extends Controller
                 'bework_id' => $bework_id
             ]);
         }
-        $role = $userData['user_type'] == 1 ? 'Agent' : 'User';
+        $role = $userData['user_type'] == 1 ? 'Agent' : ($userData['user_type'] == 2 ? 'Admin' : 'User');
+       
         $user->assignRole($role);
         $credentials = [
             'email' => $email,

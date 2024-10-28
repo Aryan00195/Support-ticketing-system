@@ -11,8 +11,8 @@
             <DxRequiredRule />
             <DxEmailRule message="Email is invalid" />
         </DxColumn>
-        <DxColumn caption="Roles" cell-template="role-template" edit-cell-template="rolesdropdown">
-        </DxColumn>
+        <!-- <DxColumn caption="Roles" cell-template="role-template" edit-cell-template="rolesdropdown">
+        </DxColumn> -->
         <template #rolesdropdown>
             <DxDropDownBox :accept-custom-value="true" label="Select Role" labelMode="floating"
                 v-model:value="selectedRoleType" v-model:opened="roletypedropdown">

@@ -24,8 +24,7 @@
                 <v-icon v-bind="props" class="menu" size="35"> mdi-menu-down</v-icon>
             </template>
             <v-list>
-                <v-list-item prepend-icon="mdi-account" title="Login as User" value="Login as User" href="/login"
-                    class="dropdown"></v-list-item>
+              
                 <v-list-item class="dropdown" prepend-icon="mdi-logout" title="Logout" value="Dashboard"
                     @click="logout()"></v-list-item>
             </v-list>
@@ -72,16 +71,16 @@ export default {
                 icon: "mdi-list-box",
                 href: "/admin/agents",
             },
-            // {
-            //     title: "Profile",
-            //     icon: "mdi-account-circle",
-            //     href: "/admin/profile",
-            // },
-            // {
-            //   title: "Add New Blog",
-            //   icon: "mdi-post",
-            //   href: "/admin/add/blog",
-            // },
+            {
+                title: "Category",
+                icon: "mdi-shape",
+                href: "/admin/category",
+            },
+            {
+              title: "SubCategory",
+              icon: "mdi-post",
+              href: "/admin/subcategory",
+            },
         ]);
         const isActiveItem = (item) => {
             return window.location.pathname === item.href;

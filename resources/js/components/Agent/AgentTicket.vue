@@ -67,7 +67,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-
     <v-row v-if="filteredTickets.length > 0">
       <v-col
         v-for="ticket in paginatedTickets"
@@ -104,6 +103,7 @@
         </v-card>
       </v-col>
     </v-row>
+    <div v-else class="noticket">No tickets found.</div>
     <div style="display: flex; justify-content: flex-end">
       <v-pagination
         v-if="filteredTickets.length > 0"
@@ -213,7 +213,7 @@ export default {
       }
     };
     const viewTicket = (ticketId) => {
-      window.location.href = `/agent/view-ticket/${ticketId}`;
+      window.location.href = `/agent/view-tickets/${ticketId}`;
     };
     const closeEditTicket = () => {
       isEditTicketModalOpen.value = false;
@@ -237,6 +237,14 @@ export default {
         );
         if (response.status === 200) {
           console.log("Ticket updated successfully");
+          window.Swal.fire({
+              toast: true,
+              position: "top-end",
+              timer: 2000,
+              showConfirmButton: false,
+              icon: "success",
+              title: "Ticket updated Successfully",
+            });
           isEditTicketModalOpen.value = false;
           window.location.reload();
         }

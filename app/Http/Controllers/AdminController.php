@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Status;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class AdminController extends Controller
 {
@@ -83,26 +84,57 @@ class AdminController extends Controller
     //function to add new user in the admin panel
     public function addUsers(Request $request)
     {
-        // dd($request);
         try {
+            // Validate the request
             $this->validate($request, [
                 'name' => 'required',
                 'email' => 'required|unique:users',
                 'password' => 'required',
             ]);
-            // dd($request->all());
             $input = $request->all();
             $user = User::create([
-                'name' =>  $input['name'],
-                'email' =>  $input['email'],
-                'password' =>  Hash::make($input['password']),
+                'name' => $input['name'],
+                'email' => $input['email'],
+                'password' => Hash::make($input['password']),
             ]);
-            if ($request->has('roleType')) {
-                $user->assignRole($input['roleType']);
-            } else {
-                $user->assignRole('User');
+            $roleType = $request->input('roleType', 'Agent');
+            // dd($roleType);
+            $user_type = '';
+            switch ($roleType) {
+                case 'Agent':
+                    $user->assignRole('Agent');
+                    $user_type = 'Client';
+                    break;
+                case 'User':
+                    $user->assignRole('User');
+                    $user_type = 'Freelancer';
+                    break;
+                case 'Admin':
+                    $user->assignRole('Admin');
+                    $user_type = 'Admin';
+                    break;
             }
-            return response()->json(['status' => true, 'data' => $user, 'message' => 'User Added Successfully'], 200);
+            $base_url = config('services.sso.base_url');
+            $response = Http::post($base_url . '/api/v1/auth/register', [
+                'firstName' => $input['name'],
+                'email' => $input['email'],
+                'password' => $input['password'],
+                'user_type' => $user_type,
+                'email_status' => 'on',
+            ]);
+            // dd($response);
+            if ($response) {
+                return response()->json([
+                    'status' => true,
+                    'data' => $user,
+                    'message' => 'User added successfully in both systems'
+                ], 200);
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Failed to add user in the other system'
+                ], 500);
+            }
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
@@ -155,129 +187,115 @@ class AdminController extends Controller
         }
     }
     public function getAgentUsers()
-{
-    try {
-      
-        $agentUsers = User::whereHas('roles', function ($query) {
-            $query->where('name', 'Agent');
-        })
-        ->select('id', 'name')
-        ->get();
-
-        return response()->json($agentUsers);
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Failed to fetch agent users'], 500);
-    }
-}
-public function updateticket(Request $request, $id)
-{
-    try {
-        $ticket = Ticket::find($id);
-        $validatedData = $request->validate([
-            'assign_agent_id' => 'nullable',
-            'status_id' => 'nullable',
-        ]);
-        if (isset($validatedData['assign_agent_id'])) {
-            $user = User::where('name', $validatedData['assign_agent_id'])->first();
-            if (!$user) {
-                unset($validatedData['assign_agent_id']);
-            } else {
-                $validatedData['assign_agent_id'] = $user->id;
-            }
-        }
-        if (isset($validatedData['status_id'])) {
-            $status = Status::where('name', $validatedData['status_id'])->first();
-            if (!$status) {
-                unset($validatedData['status_id']);
-            } else {
-                $validatedData['status_id'] = $status->id;
-            }
-        }
-        if ($ticket) {
-            $ticket->assign_agent_id = $validatedData['assign_agent_id'] ?? $ticket->assign_agent_id;
-            $ticket->update($validatedData);
-        } else {
-            $ticket = Ticket::create($validatedData);
-        }
-        return response()->json(['message' => 'Ticket updated successfully'], 200);
-    } catch (\Exception $e) {
-        return response()->json(['message' => 'Failed to update ticket', 'error' => $e->getMessage()], 500);
-    }
-}
-public function getAgents(Request $request)
-{
-    try {
-        $user = Auth::user();
-        $users = User::query();
-
-        if ($user->hasRole('Admin')) {
-            $users->whereHas('roles', function ($query) {
+    {
+        try {
+            $agentUsers = User::whereHas('roles', function ($query) {
                 $query->where('name', 'Agent');
-            });
-        } else {
-            return response()->json(['status' => false, 'message' => 'Unauthorized'], 403);
+            })
+                ->select('id', 'name')
+                ->get();
+            return response()->json($agentUsers);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch agent users'], 500);
         }
-
-        $response = [];
-
-        if ($request->requireTotalCount) {
-            $response['totalCount'] = $users->count();
-        }
-
-        if (isset($request->take)) {
-            $users->skip($request->skip)->take($request->take);
-        }
-
-        if (isset($request->sort)) {
-            $sort = json_decode($request->sort, true);
-            if (count($sort)) {
-                $users->orderBy($sort[0]['selector'], ($sort[0]['desc'] ? 'DESC' : 'ASC'));
-            }
-        } else {
-            $users->orderBy('created_at', 'DESC');
-        }
-
-        if ($request->has('filter')) {
-            $filters = json_decode($request->filter, true);
-            if (count($filters)) {
-                $filters = is_array($filters[0]) ? $filters[0] : $filters;
-                $search = !blank($filters[2]) ? $filters[2] : false;
-                if ($search) {
-                    $users->where('name', 'like', "%$search%");
+    }
+    public function updateticket(Request $request, $id)
+    {
+        try {
+            $ticket = Ticket::find($id);
+            $validatedData = $request->validate([
+                'assign_agent_id' => 'nullable',
+                'status_id' => 'nullable',
+            ]);
+            if (isset($validatedData['assign_agent_id'])) {
+                $user = User::where('name', $validatedData['assign_agent_id'])->first();
+                if (!$user) {
+                    unset($validatedData['assign_agent_id']);
+                } else {
+                    $validatedData['assign_agent_id'] = $user->id;
                 }
             }
+            if (isset($validatedData['status_id'])) {
+                $status = Status::where('name', $validatedData['status_id'])->first();
+                if (!$status) {
+                    unset($validatedData['status_id']);
+                } else {
+                    $validatedData['status_id'] = $status->id;
+                }
+            }
+            if ($ticket) {
+                $ticket->assign_agent_id = $validatedData['assign_agent_id'] ?? $ticket->assign_agent_id;
+                $ticket->update($validatedData);
+            } else {
+                $ticket = Ticket::create($validatedData);
+            }
+            return response()->json(['message' => 'Ticket updated successfully'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to update ticket', 'error' => $e->getMessage()], 500);
         }
-
-        $userList = $users->get();
-
-        foreach ($userList as $user) {
-            $roles = $user->getRoleNames();
-            $user->roles = $roles;
-        }
-
-        $response['data'] = $userList;
-        $totalCount = $users->count();
-
-        if ($userList->isNotEmpty()) {
-            return response()->json([
-                'status' => true,
-                'data' => $userList,
-                'totalCount' => $totalCount,
-            ], 200);
-        } else {
-            $response = [
-                'status' => false,
-                'message' => 'No agents found',
-            ];
-            return response()->json($response, 404);
-        }
-    } catch (\Exception $e) {
-        return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
     }
-}
+    public function getAgents(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $users = User::query();
+            if ($user->hasRole('Admin')) {
+                $users->whereHas('roles', function ($query) {
+                    $query->where('name', 'Agent');
+                });
+            } else {
+                return response()->json(['status' => false, 'message' => 'Unauthorized'], 403);
+            }
+            $response = [];
+            if ($request->requireTotalCount) {
+                $response['totalCount'] = $users->count();
+            }
+            if (isset($request->take)) {
+                $users->skip($request->skip)->take($request->take);
+            }
+            if (isset($request->sort)) {
+                $sort = json_decode($request->sort, true);
+                if (count($sort)) {
+                    $users->orderBy($sort[0]['selector'], ($sort[0]['desc'] ? 'DESC' : 'ASC'));
+                }
+            } else {
+                $users->orderBy('created_at', 'DESC');
+            }
+            if ($request->has('filter')) {
+                $filters = json_decode($request->filter, true);
+                if (count($filters)) {
+                    $filters = is_array($filters[0]) ? $filters[0] : $filters;
+                    $search = !blank($filters[2]) ? $filters[2] : false;
+                    if ($search) {
+                        $users->where('name', 'like', "%$search%");
+                    }
+                }
+            }
+            $userList = $users->get();
 
+            foreach ($userList as $user) {
+                $roles = $user->getRoleNames();
+                $user->roles = $roles;
+            }
 
+            $response['data'] = $userList;
+            $totalCount = $users->count();
 
-
-
+            if ($userList->isNotEmpty()) {
+                return response()->json([
+                    'status' => true,
+                    'data' => $userList,
+                    'totalCount' => $totalCount,
+                ], 200);
+            } else {
+                $response = [
+                    'status' => false,
+                    'message' => 'No agents found',
+                ];
+                return response()->json($response, 404);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
 }
